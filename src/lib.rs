@@ -415,6 +415,8 @@ mod test_pending_issuer_transfer;
 #[cfg(test)]
 mod test_propose_transfer_with_expiry;
 #[cfg(test)]
+mod test_replace_issuer_transfer;
+#[cfg(test)]
 mod test_testnet_mode;
 #[cfg(test)]
 mod test_time_windows;
