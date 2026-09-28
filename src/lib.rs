@@ -405,6 +405,8 @@ mod test_event_indexed_v2;
 #[cfg(test)]
 mod test_event_indexed_v3;
 #[cfg(test)]
+mod test_issuer_transfer_cancel;
+#[cfg(test)]
 mod test_merkle_canonical_order;
 #[cfg(test)]
 mod test_min_revenue_threshold_boundary;
