@@ -20,6 +20,14 @@ restoration, but they no longer compile as part of the crate.
 >   the contract documented an event it never emitted. The emission was
 >   restored with per-window counter rollover; see
 >   `src/test_faucet_metrics.rs` for details.
+>
+> **Related casualty (2026-09):** `src/test_indexer_fixtures.rs` was never
+> quarantined, but the merge chain dropped its `mod test_indexer_fixtures;`
+> declaration from `src/lib.rs` (last present in `0acd0b5`), leaving all 22
+> indexer-fixture tests silently uncompiled — CI's `|| true` masked this as
+> well. The declaration was restored and the file ported to the current API
+> (`emit_v2_event` payload wrapping, `env.as_contract` for cost-basis seeding,
+> SDK-21 `Val` comparisons via `try_into_val`).
 
 ## Why they were quarantined
 

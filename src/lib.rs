@@ -406,6 +406,8 @@ mod test_faucet_metrics;
 #[cfg(test)]
 mod test_faucet_seed;
 #[cfg(test)]
+mod test_indexer_fixtures;
+#[cfg(test)]
 mod test_min_revenue_threshold_boundary;
 #[cfg(test)]
 mod test_time_windows;
@@ -433,7 +435,9 @@ mod test_utils;
 // (test_close_period, test_deferred_priority, test_faucet_seed and
 // test_faucet_metrics were restored and ported to the current API in 2026-09;
 // restoring the faucet pair also re-added the fct_mtr1 emission code the
-// merge chain had dropped from faucet_seed_holders — see fb12481.)
+// merge chain had dropped from faucet_seed_holders — see fb12481. The same
+// chain had also dropped `mod test_indexer_fixtures;` below, orphaning that
+// file; the declaration was restored in 2026-09 and the file ported.)
 
 // â”€â”€ Event symbols â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const EVENT_REVENUE_REPORTED: Symbol = symbol_short!("rev_rep");
