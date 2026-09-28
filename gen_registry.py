@@ -61,7 +61,7 @@ def harvest_annotations():
 
 GROUPS = [
     ("revora_revenue_share", [
-        ("src/lib.rs", ["DeferredDataKey", "WindowDataKey", "MetaDataKey", "DataKey", "DataKey2", "DataKey3", "MigrationDataKey"]),
+        ("src/lib.rs", ["DeferredDataKey", "WindowDataKey", "MetaDataKey", "DataKey", "DataKey2", "DataKey3", "FaucetDataKey", "MigrationDataKey"]),
     ]),
     ("revenue_deposit_contract", [
         ("src/revenue_deposit_contract.rs", ["DataKey"]),

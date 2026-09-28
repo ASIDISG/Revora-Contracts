@@ -1082,6 +1082,20 @@
     },
     {
       "module": "revora_revenue_share",
+      "key": "FaucetDataKey::WindowEmitted",
+      "value_type": "u64",
+      "ownership": "contract",
+      "version": 5
+    },
+    {
+      "module": "revora_revenue_share",
+      "key": "FaucetDataKey::WindowOpened",
+      "value_type": "u64",
+      "ownership": "contract",
+      "version": 5
+    },
+    {
+      "module": "revora_revenue_share",
       "key": "MetaDataKey::Delegate(OfferingId)",
       "value_type": "Address",
       "ownership": "offering",

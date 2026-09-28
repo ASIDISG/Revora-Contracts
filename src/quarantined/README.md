@@ -1,6 +1,6 @@
 # Quarantined test-support files
 
-These eleven files were moved out of the compilation unit on the
+These nine files were moved out of the compilation unit on the
 `fix/lib-build-recovery` branch. They are **preserved verbatim** for future
 restoration, but they no longer compile as part of the crate.
 
@@ -13,6 +13,13 @@ restoration, but they no longer compile as part of the crate.
 >   current API (explicit `None::<T>` generics on `initialize`, index-based
 >   event lookup for the pre-`Option`-`Vec::get` pattern). See
 >   `src/test_deferred_priority.rs` for the porting notes.
+> - `test_faucet_seed.rs` + `test_faucet_metrics.rs` — moved back to `src/`
+>   and ported. The metrics pair also surfaced a **contract regression**: the
+>   merge chain dropped the `fct_mtr1` emission helper (`fb12481`, PR #676)
+>   while its constant, storage counters, docs, and indexer fixture survived —
+>   the contract documented an event it never emitted. The emission was
+>   restored with per-window counter rollover; see
+>   `src/test_faucet_metrics.rs` for details.
 
 ## Why they were quarantined
 
@@ -27,8 +34,6 @@ contract APIs that do not exist anywhere in the restored snapshot:
 | `test_storage_layout_version.rs` | `create_migration_plan` / `migration_plan` entrypoints |
 | `proptest_helpers.rs` | `TestOperation` variants predating the 11-arg `register_offering` |
 | `test_quorum_check.rs` | pre-quorum-refactor client signatures |
-| `test_faucet_metrics.rs` | raw `Val` comparisons and event iteration against a changed API |
-| `test_faucet_seed.rs` | faucet seed API drift |
 | `test_event_indexed_v3.rs` | V3 event fixture arity drift |
 | `test_snapshot_voting_weight.rs` | `Address::get` (nonexistent) snapshot lookup |
 | `test_merkle_proof_depth.rs` | `Symbol`/`Val` comparisons, helper drift |

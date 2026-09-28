@@ -402,6 +402,10 @@ mod test_deferred_priority;
 mod test_duplicates;
 mod test_event_indexed_v2;
 #[cfg(test)]
+mod test_faucet_metrics;
+#[cfg(test)]
+mod test_faucet_seed;
+#[cfg(test)]
 mod test_min_revenue_threshold_boundary;
 #[cfg(test)]
 mod test_time_windows;
@@ -418,8 +422,7 @@ mod test_tax_year;
 mod test_transfer_cooldown;
 #[cfg(test)]
 mod test_utils;
-// NOTE: eleven test-support files (test_quorum_check,
-// test_faucet_seed, test_faucet_metrics,
+// NOTE: nine test-support files (test_quorum_check,
 // test_event_indexed_v3, test_snapshot_voting_weight, test_merkle_proof_depth,
 // test_merkle_canonical_order, test_storage_layout_version,
 // test_compute_share_invariants, test_accrual_reconciliation_prop,
@@ -427,8 +430,10 @@ mod test_utils;
 // APIs that do not exist in this snapshot (set_class_supply_cap,
 // migration_plan, …) and had not compiled since the Aug-31 merge chain. CI's
 // `|| true` masked this. See src/quarantined/README.md for restoration notes.
-// (test_close_period and test_deferred_priority were restored and ported to
-// the current API in 2026-09.)
+// (test_close_period, test_deferred_priority, test_faucet_seed and
+// test_faucet_metrics were restored and ported to the current API in 2026-09;
+// restoring the faucet pair also re-added the fct_mtr1 emission code the
+// merge chain had dropped from faucet_seed_holders — see fb12481.)
 
 // â”€â”€ Event symbols â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const EVENT_REVENUE_REPORTED: Symbol = symbol_short!("rev_rep");
@@ -2019,6 +2024,8 @@ pub enum DataKey3 {
     FaucetMetricsUniqueAddrs,
     /// Global faucet total-dispensed counter.
     FaucetMetricsTotalDispensed,
+    // NOTE: DataKey3 is at the 50-case XDR spec-union limit (see enum doc).
+    // Newer faucet-metrics window markers live in [`FaucetDataKey`] below.
 
     // ── Misc keys ──
     /// Admin rotation delay in seconds.
@@ -2039,6 +2046,21 @@ pub enum DataKey3 {
     EmitV2Compat,
     /// Remaining tax cost basis (i128) for (offering_id, holder).
     RemainingBasis(OfferingId, Address),
+}
+
+/// Faucet-metrics window markers.
+///
+/// `DataKey3` is at the 50-case XDR spec-union limit
+/// (`VecM<ScSpecUdtUnionCaseV0, 50>`); adding cases beyond 50 makes the
+/// `#[contracttype]` derive panic with `LengthExceedsMax`, so variants
+/// introduced after that limit was reached live in their own enum.
+#[contracttype]
+#[derive(Clone)]
+pub enum FaucetDataKey {
+    /// Window id the faucet-metrics counters were last reset for (rollover marker).
+    WindowOpened,
+    /// Window id of the last emitted `fct_mtr1` faucet-metrics summary event.
+    WindowEmitted,
 }
 
 /// Maximum number of offerings returned in a single page.
@@ -13741,6 +13763,10 @@ impl RevoraRevenueShare {
                 );
 
                 // ── Metrics: count the cooldown reject ────────────────────────
+                // Roll the window-scoped counters over first if this reject is
+                // the first faucet activity of a new metrics window, so the
+                // increment lands in the right window's bucket.
+                Self::faucet_metrics_rollover_reset(&env, now / FAUCET_METRICS_WINDOW_SECS);
                 let rejects: u32 = env
                     .storage()
                     .persistent()
@@ -13762,6 +13788,9 @@ impl RevoraRevenueShare {
 
         // ── Metrics: count unique addresses ───────────────────────────────────
         let current_window_id = now / FAUCET_METRICS_WINDOW_SECS;
+        // Roll the window-scoped counters over if this is the first faucet
+        // activity of a new metrics window (fresh counters, per-window uniques).
+        Self::faucet_metrics_rollover_reset(&env, current_window_id);
         let addr_seen_key = DataKey3::FaucetMetricsAddrSeen(current_window_id, requester.clone());
         if !env.storage().persistent().has(&addr_seen_key) {
             env.storage().persistent().set(&addr_seen_key, &true);
@@ -13826,7 +13855,75 @@ impl RevoraRevenueShare {
                 .set::<DataKey3, u32>(&DataKey3::FaucetSeedCount(offering_id.clone()), &count);
         }
 
+        // ── Metrics: emit the windowed summary if this call is the first
+        // successful dispense of a not-yet-emitted window (#676).
+        Self::faucet_metrics_emit_if_new_window(&env, now);
+
         Ok(seeds)
+    }
+
+    /// Reset the window-scoped faucet metrics counters when the ledger has
+    /// crossed into a metrics window that has not been opened yet.
+    ///
+    /// Called on every faucet activity (successful dispense or cooldown
+    /// reject) so the `FaucetMetrics*` counters always describe the *current*
+    /// window only. `FaucetDataKey::WindowOpened` stores the window id the
+    /// counters were last reset for; the per-window `FaucetMetricsAddrSeen`
+    /// keys need no clearing because they are already window-scoped.
+    fn faucet_metrics_rollover_reset(env: &Env, current_window_id: u64) {
+        let opened: u64 =
+            env.storage().persistent().get(&FaucetDataKey::WindowOpened).unwrap_or(0u64);
+        if current_window_id <= opened {
+            return;
+        }
+        env.storage().persistent().set(&DataKey3::FaucetMetricsCooldownRejects, &0u32);
+        env.storage().persistent().set(&DataKey3::FaucetMetricsUniqueAddrs, &0u32);
+        env.storage().persistent().set(&DataKey3::FaucetMetricsTotalDispensed, &0u32);
+        env.storage().persistent().set(&FaucetDataKey::WindowOpened, &current_window_id);
+    }
+
+    /// Emit the `fct_mtr1` windowed metrics summary event if `now` falls in a
+    /// window that has not received one yet.
+    ///
+    /// **Called at the end of a successful (non-zero) `faucet_seed_holders`
+    /// invocation.** Idempotent within a window via the
+    /// `FaucetDataKey::WindowEmitted` marker; counters were already rolled over by
+    /// [`Self::faucet_metrics_rollover_reset`], so the published values
+    /// describe exactly the current window.
+    ///
+    /// ### Event schema
+    /// ```text
+    /// topic: (fct_mtr1, window_id: u64)
+    /// data:  (total_dispensed: u32, unique_addresses: u32,
+    ///         cooldown_rejects: u32, window_start: u64, window_end: u64)
+    /// ```
+    fn faucet_metrics_emit_if_new_window(env: &Env, now: u64) {
+        let current_window_id = now / FAUCET_METRICS_WINDOW_SECS;
+        let last_emitted: u64 =
+            env.storage().persistent().get(&FaucetDataKey::WindowEmitted).unwrap_or(0u64);
+        if current_window_id <= last_emitted {
+            // Already emitted for this window — idempotency guard.
+            return;
+        }
+
+        let total_dispensed: u32 =
+            env.storage().persistent().get(&DataKey3::FaucetMetricsTotalDispensed).unwrap_or(0u32);
+        let unique_addresses: u32 =
+            env.storage().persistent().get(&DataKey3::FaucetMetricsUniqueAddrs).unwrap_or(0u32);
+        let cooldown_rejects: u32 =
+            env.storage().persistent().get(&DataKey3::FaucetMetricsCooldownRejects).unwrap_or(0u32);
+
+        let window_start: u64 = current_window_id * FAUCET_METRICS_WINDOW_SECS;
+        let window_end: u64 =
+            window_start.saturating_add(FAUCET_METRICS_WINDOW_SECS).saturating_sub(1);
+
+        env.events().publish(
+            (EVENT_FAUCET_METRICS, current_window_id),
+            (total_dispensed, unique_addresses, cooldown_rejects, window_start, window_end),
+        );
+
+        // Mark this window as emitted so further calls in the same window are no-ops.
+        env.storage().persistent().set(&FaucetDataKey::WindowEmitted, &current_window_id);
     }
 
     /// Deterministically reset the faucet state for an offering (testnet only).

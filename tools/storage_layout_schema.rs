@@ -191,6 +191,9 @@ const CORE_LAYOUT: &[StorageLayoutEntry] = storage_layout_entries!("revora_reven
     ("DataKey3::ProcessedAttestationHash(BytesN<32>)", "bool", "attestation"),
     ("DataKey3::EmitV2Compat", "bool", "contract"),
     ("DataKey3::RemainingBasis(OfferingId, Address)", "i128", "offering+holder"),
+    // -- FaucetDataKey --
+    ("FaucetDataKey::WindowOpened", "u64", "contract"),
+    ("FaucetDataKey::WindowEmitted", "u64", "contract"),
     // -- MigrationDataKey --
     ("MigrationDataKey::LastMigrationCompletedAt(Address)", "u32", "issuer"),
     ("MigrationDataKey::MigrationResumeCursor(Address)", "MigrationCursor", "issuer"),
@@ -292,6 +295,7 @@ fn collect_source_keys(repo_root: &Path) -> Result<BTreeSet<String>, String> {
         ("src/lib.rs", "DataKey"),
         ("src/lib.rs", "DataKey2"),
         ("src/lib.rs", "DataKey3"),
+        ("src/lib.rs", "FaucetDataKey"),
         ("src/lib.rs", "MigrationDataKey"),
         ("src/revenue_deposit_contract.rs", "DataKey"),
         ("src/vesting.rs", "VestingKey"),
