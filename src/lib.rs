@@ -390,6 +390,8 @@ pub mod security_assertions;
 pub mod kani_harness;
 
 #[cfg(test)]
+mod test_accept_issuer_transfer;
+#[cfg(test)]
 mod test_audit_summary_getter;
 #[cfg(test)]
 mod test_claim_transfer_fail;
