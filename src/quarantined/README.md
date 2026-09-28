@@ -1,13 +1,18 @@
 # Quarantined test-support files
 
-These twelve files were moved out of the compilation unit on the
+These eleven files were moved out of the compilation unit on the
 `fix/lib-build-recovery` branch. They are **preserved verbatim** for future
 restoration, but they no longer compile as part of the crate.
 
-> **Restored (2026-09):** `test_close_period.rs` was moved back to `src/` and
-> ported to the current API (public-client preflight, `test_utils` minting,
-> legacy `DeferredReports` flush suite dropped — the live contract no longer
-> reads that key). See `src/test_close_period.rs` for the porting notes.
+> **Restored (2026-09):**
+> - `test_close_period.rs` — moved back to `src/` and ported to the current
+>   API (public-client preflight, `test_utils` minting, legacy `DeferredReports`
+>   flush suite dropped — the live contract no longer reads that key). See
+>   `src/test_close_period.rs` for the porting notes.
+> - `test_deferred_priority.rs` — moved back to `src/` and ported to the
+>   current API (explicit `None::<T>` generics on `initialize`, index-based
+>   event lookup for the pre-`Option`-`Vec::get` pattern). See
+>   `src/test_deferred_priority.rs` for the porting notes.
 
 ## Why they were quarantined
 
@@ -24,7 +29,6 @@ contract APIs that do not exist anywhere in the restored snapshot:
 | `test_quorum_check.rs` | pre-quorum-refactor client signatures |
 | `test_faucet_metrics.rs` | raw `Val` comparisons and event iteration against a changed API |
 | `test_faucet_seed.rs` | faucet seed API drift |
-| `test_deferred_priority.rs` | deferred-queue API drift |
 | `test_event_indexed_v3.rs` | V3 event fixture arity drift |
 | `test_snapshot_voting_weight.rs` | `Address::get` (nonexistent) snapshot lookup |
 | `test_merkle_proof_depth.rs` | `Symbol`/`Val` comparisons, helper drift |
