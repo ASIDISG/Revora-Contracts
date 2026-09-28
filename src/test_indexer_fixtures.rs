@@ -14,7 +14,7 @@ use crate::{
 
 /// Set up a minimal contract with admin + one registered offering.
 /// Returns (client, admin/issuer, token, payout_asset).
-fn setup_with_offering(env: &Env) -> (RevoraRevenueShareClient, Address, Address, Address) {
+fn setup_with_offering(env: &Env) -> (RevoraRevenueShareClient<'_>, Address, Address, Address) {
     env.mock_all_auths();
     let contract_id = env.register_contract(None, RevoraRevenueShare);
     let client = RevoraRevenueShareClient::new(env, &contract_id);
@@ -24,7 +24,7 @@ fn setup_with_offering(env: &Env) -> (RevoraRevenueShareClient, Address, Address
     client.initialize(&admin, &None::<Address>, &None::<bool>);
     client.register_offering(
         &admin,
-        &Vec::new(&env),
+        &Vec::new(env),
         &1u32,
         &symbol_short!("def"),
         &token,
@@ -189,10 +189,10 @@ fn register_offering_emits_ofr_reg2_v2_event() {
     assert!(events.len() > before, "register_offering must emit at least one event");
 
     // Verify ofr_reg2 topic is present among the new events.
-    let new_events = events.slice(before as u32..);
+    let new_events = events.slice(before..);
     let ofr_reg2_sym = symbol_short!("ofr_reg2");
     let found = new_events.iter().any(|(_, topics, _)| {
-        topics.len() > 0
+        !topics.is_empty()
             && topics
                 .get(0)
                 .map(|t| t.try_into_val(&env) as Result<Symbol, _> == Ok(ofr_reg2_sym.clone()))
@@ -227,11 +227,11 @@ fn register_offering_v2_event_data_starts_with_version_2() {
     );
 
     let events = env.events().all();
-    let new_events = events.slice(before as u32..);
+    let new_events = events.slice(before..);
     let ofr_reg2_sym = symbol_short!("ofr_reg2");
 
     for (_, topics, data) in new_events.iter() {
-        if topics.len() > 0
+        if !topics.is_empty()
             && topics
                 .get(0)
                 .map(|t| t.try_into_val(&env) as Result<Symbol, _> == Ok(ofr_reg2_sym.clone()))
@@ -268,10 +268,10 @@ fn report_revenue_emits_rv_init2_on_initial_report() {
     );
 
     let events = env.events().all();
-    let new_events = events.slice(before as u32..);
+    let new_events = events.slice(before..);
     let rv_init2_sym = symbol_short!("rv_init2");
     let found = new_events.iter().any(|(_, topics, _)| {
-        topics.len() > 0
+        !topics.is_empty()
             && topics
                 .get(0)
                 .map(|t| t.try_into_val(&env) as Result<Symbol, _> == Ok(rv_init2_sym.clone()))
@@ -297,10 +297,10 @@ fn report_revenue_emits_rv_rep2_unconditionally() {
     );
 
     let events = env.events().all();
-    let new_events = events.slice(before as u32..);
+    let new_events = events.slice(before..);
     let rv_rep2_sym = symbol_short!("rv_rep2");
     let found = new_events.iter().any(|(_, topics, _)| {
-        topics.len() > 0
+        !topics.is_empty()
             && topics
                 .get(0)
                 .map(|t| t.try_into_val(&env) as Result<Symbol, _> == Ok(rv_rep2_sym.clone()))
@@ -326,10 +326,10 @@ fn report_revenue_emits_rv_repa2_unconditionally() {
     );
 
     let events = env.events().all();
-    let new_events = events.slice(before as u32..);
+    let new_events = events.slice(before..);
     let rv_repa2_sym = symbol_short!("rv_repa2");
     let found = new_events.iter().any(|(_, topics, _)| {
-        topics.len() > 0
+        !topics.is_empty()
             && topics
                 .get(0)
                 .map(|t| t.try_into_val(&env) as Result<Symbol, _> == Ok(rv_repa2_sym.clone()))
@@ -356,10 +356,10 @@ fn report_revenue_emits_rv_inia2_unconditionally_without_versioning_flag() {
     );
 
     let events = env.events().all();
-    let new_events = events.slice(before as u32..);
+    let new_events = events.slice(before..);
     let rv_inia2_sym = symbol_short!("rv_inia2");
     let found = new_events.iter().any(|(_, topics, _)| {
-        topics.len() > 0
+        !topics.is_empty()
             && topics
                 .get(0)
                 .map(|t| t.try_into_val(&env) as Result<Symbol, _> == Ok(rv_inia2_sym.clone()))
@@ -383,10 +383,10 @@ fn set_holder_share_emits_sh_set2_v2_event() {
     client.set_holder_share(&issuer, &symbol_short!("def"), &token, &holder, &1_000, &1);
 
     let events = env.events().all();
-    let new_events = events.slice(before as u32..);
+    let new_events = events.slice(before..);
     let sh_set2_sym = symbol_short!("sh_set2");
     let found = new_events.iter().any(|(_, topics, _)| {
-        topics.len() > 0
+        !topics.is_empty()
             && topics
                 .get(0)
                 .map(|t| t.try_into_val(&env) as Result<Symbol, _> == Ok(sh_set2_sym.clone()))
@@ -709,7 +709,7 @@ fn fixture_tax_lot_v1_data_tuple_shape() {
     // Find the tax_lt1 event among the new events.
     let tax_lt1_val = EVENT_TAX_LOT_V1;
     let mut found = false;
-    for (_, topics, data) in env.events().all().slice(before as u32..).iter() {
+    for (_, topics, data) in env.events().all().slice(before..).iter() {
         if topics.len() >= 4
             && topics
                 .get(0)
@@ -791,7 +791,7 @@ fn fixture_tax_lot_v1_capital_gains_when_basis_exhausted() {
 
     let tax_lt1_val = EVENT_TAX_LOT_V1;
     let mut found = false;
-    for (_, topics, data) in env.events().all().slice(before as u32..).iter() {
+    for (_, topics, data) in env.events().all().slice(before..).iter() {
         if topics.len() >= 4
             && topics
                 .get(0)
@@ -870,7 +870,7 @@ fn fixture_tax_lot_v1_zero_payout_emits_no_event() {
 
     // Scan for any tax_lt1 event — must be absent.
     let tax_lt1_val = EVENT_TAX_LOT_V1;
-    for (_, topics, _) in env.events().all().slice(before as u32..).iter() {
+    for (_, topics, _) in env.events().all().slice(before..).iter() {
         if topics.len() >= 4
             && topics
                 .get(0)
@@ -936,7 +936,7 @@ fn fixture_tax_lot_v1_burst_emits_n_events() {
     // Second claim: period 3
     client.claim(&holder, &issuer, &ns, &token, &10);
 
-    let new_events = env.events().all().slice(before as u32..);
+    let new_events = env.events().all().slice(before..);
     let tax_lt1_val = EVENT_TAX_LOT_V1;
     let mut tax_lot_count = 0u32;
     for (_, topics, _) in new_events.iter() {

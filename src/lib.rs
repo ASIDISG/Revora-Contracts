@@ -406,6 +406,8 @@ mod test_faucet_metrics;
 #[cfg(test)]
 mod test_faucet_seed;
 #[cfg(test)]
+mod test_issuer_transfer_cancel;
+#[cfg(test)]
 mod test_indexer_fixtures;
 #[cfg(test)]
 mod test_min_revenue_threshold_boundary;

@@ -119,7 +119,7 @@ fn find_metrics_event(env: &Env) -> Option<(u64, u32, u32, u32, u64, u64)> {
 fn count_metrics_events(env: &Env) -> usize {
     let mut count = 0usize;
     for (_, topics, _) in env.events().all().iter() {
-        if topics.len() >= 1
+        if !topics.is_empty()
             && topics
                 .get(0)
                 .map(|t| t.try_into_val(env) as Result<Symbol, _> == Ok(EVENT_FAUCET_METRICS))
@@ -353,7 +353,7 @@ fn new_window_event_has_fresh_counters() {
             .all()
             .iter()
             .filter(|(_, topics, _)| {
-                topics.len() >= 1
+                !topics.is_empty()
                     && topics
                         .get(0)
                         .map(|t| {
@@ -469,7 +469,7 @@ fn rejects_are_window_scoped_and_reset_on_rollover() {
         .all()
         .iter()
         .filter(|(_, topics, _)| {
-            topics.len() >= 1
+            !topics.is_empty()
                 && topics
                     .get(0)
                     .map(|t| t.try_into_val(&env) as Result<Symbol, _> == Ok(EVENT_FAUCET_METRICS))
