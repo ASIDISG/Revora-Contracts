@@ -395,6 +395,8 @@ pub mod kani_harness;
 #[cfg(test)]
 mod test_claim_transfer_fail;
 #[cfg(test)]
+mod test_close_period;
+#[cfg(test)]
 mod test_duplicates;
 mod test_event_indexed_v2;
 #[cfg(test)]
@@ -414,7 +416,7 @@ mod test_tax_year;
 mod test_transfer_cooldown;
 #[cfg(test)]
 mod test_utils;
-// NOTE: thirteen test-support files (test_close_period, test_quorum_check,
+// NOTE: twelve test-support files (test_quorum_check,
 // test_faucet_seed, test_faucet_metrics, test_deferred_priority,
 // test_event_indexed_v3, test_snapshot_voting_weight, test_merkle_proof_depth,
 // test_merkle_canonical_order, test_storage_layout_version,
@@ -423,6 +425,7 @@ mod test_utils;
 // APIs that do not exist in this snapshot (set_class_supply_cap,
 // migration_plan, …) and had not compiled since the Aug-31 merge chain. CI's
 // `|| true` masked this. See src/quarantined/README.md for restoration notes.
+// (test_close_period was restored and ported to the current API in 2026-09.)
 
 // â”€â”€ Event symbols â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const EVENT_REVENUE_REPORTED: Symbol = symbol_short!("rev_rep");

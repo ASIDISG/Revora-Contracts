@@ -1,8 +1,13 @@
 # Quarantined test-support files
 
-These thirteen files were moved out of the compilation unit on the
+These twelve files were moved out of the compilation unit on the
 `fix/lib-build-recovery` branch. They are **preserved verbatim** for future
 restoration, but they no longer compile as part of the crate.
+
+> **Restored (2026-09):** `test_close_period.rs` was moved back to `src/` and
+> ported to the current API (public-client preflight, `test_utils` minting,
+> legacy `DeferredReports` flush suite dropped — the live contract no longer
+> reads that key). See `src/test_close_period.rs` for the porting notes.
 
 ## Why they were quarantined
 
@@ -15,7 +20,6 @@ contract APIs that do not exist anywhere in the restored snapshot:
 |---|---|
 | `test_compute_share_invariants.rs` | `set_class_supply_cap`, per-class supply-cap client methods |
 | `test_storage_layout_version.rs` | `create_migration_plan` / `migration_plan` entrypoints |
-| `test_close_period.rs` | legacy 5-arg `close_period` variants |
 | `proptest_helpers.rs` | `TestOperation` variants predating the 11-arg `register_offering` |
 | `test_quorum_check.rs` | pre-quorum-refactor client signatures |
 | `test_faucet_metrics.rs` | raw `Val` comparisons and event iteration against a changed API |
