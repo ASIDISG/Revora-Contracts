@@ -18,6 +18,11 @@
 //!   and reject-before-accept), expired window → `IssuerTransferExpired`
 //!   with the inclusive boundary pinned, duplicate target offering →
 //!   `LimitReached` (and the pending entry survives that rejection).
+//! - **Custom windows & cross-offering isolation** (ported from the parallel
+//!   #1059 draft): a `propose_transfer_with_expiry` window governs the accept
+//!   boundary independently of the default 7-day window, and a pending
+//!   proposal is bound to its own `(namespace, token)` identity — a sibling
+//!   offering sharing only the token cannot consume it.
 //! - **Unauthorized callers (observable Layer 2)**: accept authenticates the
 //!   *new issuer* by identity — an address with no matching proposal gets
 //!   the typed `NoTransferPending`, catchable via `try_*`. Host auth panics
@@ -51,6 +56,9 @@ use soroban_sdk::{
 
 /// Default acceptance window (7 days) — `expiry_secs == 0` resolves to this.
 const DEFAULT_EXPIRY_SECS: u64 = 7 * 24 * 60 * 60;
+
+/// Minimum custom window — `propose_transfer_with_expiry` clamps to this floor.
+const MIN_EXPIRY_SECS: u64 = 60 * 60;
 
 const NS: soroban_sdk::Symbol = symbol_short!("def");
 
@@ -416,6 +424,45 @@ fn accept_at_exact_default_window_boundary_succeeds() {
     client.accept_issuer_transfer(&new_issuer, &NS, &token);
 }
 
+/// A custom window proposed via `propose_transfer_with_expiry` governs accept.
+/// A 1-hour window stays acceptable exactly up to `timestamp + 1h`.
+#[test]
+fn accept_uses_custom_window_and_expires_past_it() {
+    let env = Env::default();
+    let client = make_client(&env);
+    let (issuer, token) = setup_offering(&env, &client);
+    let new_issuer = Address::generate(&env);
+    seed_issuer_registry(&env, &client.address, &issuer, core::slice::from_ref(&NS));
+
+    let t0 = 2_000u64;
+    env.ledger().set_timestamp(t0);
+    client.propose_transfer_with_expiry(&issuer, &NS, &token, &new_issuer, &MIN_EXPIRY_SECS);
+
+    // Exactly at the boundary: still acceptable.
+    env.ledger().set_timestamp(t0 + MIN_EXPIRY_SECS);
+    client.accept_issuer_transfer(&new_issuer, &NS, &token);
+    assert!(client.get_offering(&new_issuer, &NS, &token).is_some());
+}
+
+/// A custom 1-hour window: one second past the boundary accept must fail, even
+/// though the default 7-day window would still be open.
+#[test]
+fn accept_past_custom_window_fails_even_within_default_window() {
+    let env = Env::default();
+    let client = make_client(&env);
+    let (issuer, token) = setup_offering(&env, &client);
+    let new_issuer = Address::generate(&env);
+    seed_issuer_registry(&env, &client.address, &issuer, core::slice::from_ref(&NS));
+
+    let t0 = 3_000u64;
+    env.ledger().set_timestamp(t0);
+    client.propose_transfer_with_expiry(&issuer, &NS, &token, &new_issuer, &MIN_EXPIRY_SECS);
+
+    env.ledger().set_timestamp(t0 + MIN_EXPIRY_SECS + 1);
+    let result = client.try_accept_issuer_transfer(&new_issuer, &NS, &token);
+    assert_eq!(result, Err(Ok(RevoraError::IssuerTransferExpired)));
+}
+
 /// When the new issuer already owns an offering with the same
 /// `(namespace, token)`, accept must fail with the typed `LimitReached` —
 /// and the pending proposal survives (the duplicate check runs before any
@@ -507,4 +554,45 @@ fn accept_blocked_when_contract_paused_then_unpause_succeeds() {
     client.unpause_admin(&admin);
     client.accept_issuer_transfer(&new_issuer, &NS, &token);
     assert!(client.get_offering(&new_issuer, &NS, &token).is_some());
+}
+
+// ── Section D: Cross-offering isolation ──────────────────────────────────────
+
+/// A pending proposal for one offering must not be acceptable through a second
+/// offering that shares the token but not the namespace (and vice versa).
+#[test]
+fn pending_proposal_is_bound_to_its_own_offering_identity() {
+    let env = Env::default();
+    let client = make_client(&env);
+    let (issuer, token) = setup_offering(&env, &client);
+    let new_issuer = Address::generate(&env);
+    seed_issuer_registry(&env, &client.address, &issuer, core::slice::from_ref(&NS));
+
+    let other_ns = symbol_short!("oth");
+    client.register_offering(
+        &issuer,
+        &Vec::new(&env),
+        &1u32,
+        &other_ns,
+        &token,
+        &1_000,
+        &token,
+        &0,
+        &symbol_short!(""),
+        &0,
+    );
+
+    client.propose_issuer_transfer(&issuer, &NS, &token, &new_issuer);
+
+    // The other offering has no pending proposal.
+    let result = client.try_accept_issuer_transfer(&new_issuer, &other_ns, &token);
+    assert_eq!(result, Err(Ok(RevoraError::NoTransferPending)));
+
+    // The bound proposal is still consumable.
+    client.accept_issuer_transfer(&new_issuer, &NS, &token);
+    assert!(client.get_offering(&new_issuer, &NS, &token).is_some());
+    assert!(
+        client.get_offering(&issuer, &other_ns, &token).is_some(),
+        "the untouched sibling offering must keep its original issuer"
+    );
 }
