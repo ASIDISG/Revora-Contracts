@@ -442,6 +442,8 @@ mod test_quorum_check;
 #[cfg(test)]
 mod test_reg_limit_delta;
 #[cfg(test)]
+mod test_replace_issuer_transfer;
+#[cfg(test)]
 mod test_tax_year;
 #[cfg(test)]
 mod test_transfer_cooldown;
