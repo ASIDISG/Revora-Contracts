@@ -27,7 +27,7 @@ fn setup_offering(env: &Env) -> (RevoraRevenueShareClient<'static>, Address, Add
         &payout,
         &0,
         &symbol_short!(""),
-        &0,
+        &7,
     );
     (client, admin, token, payout)
 }

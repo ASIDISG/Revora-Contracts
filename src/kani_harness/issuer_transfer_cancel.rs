@@ -745,6 +745,10 @@ mod tests {
 mod orphan_pending_guard_tests {
     use super::*;
     use std::panic::catch_unwind;
+    use std::{
+        boxed::Box,
+        string::{String, ToString},
+    };
 
     /// Guard message asserted by the negative cases.
     const GUARD_MESSAGE: &str = "PendingIssuerTransfer key must be absent after cancel";

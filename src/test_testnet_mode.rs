@@ -45,7 +45,8 @@ fn setup() -> Ctx {
     let client = RevoraRevenueShareClient::new(&env, &contract_id);
     let admin = Address::generate(&env);
     client.initialize(&admin, &None::<Address>, &None::<bool>);
-    Ctx { env, client, admin, ns: symbol_short!("def"), payout: Address::generate(&env) }
+    let payout = Address::generate(&env);
+    Ctx { env, client, admin, ns: symbol_short!("def"), payout }
 }
 
 /// Register an offering whose share exceeds the production cap.
@@ -66,7 +67,8 @@ fn try_relaxed_registration(c: &Ctx, token: &Address) -> Result<(), RevoraError>
         &symbol_short!(""),
         &0u32,
     ) {
-        Ok(()) => Ok(()),
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(_)) => panic!("unexpected conversion error"),
         Err(inner) => Err(inner.unwrap()),
     }
 }
@@ -93,7 +95,7 @@ fn assert_relaxed_rejected(c: &Ctx) {
 }
 
 fn set_mode(c: &Ctx, enabled: bool) {
-    c.client.set_testnet_mode(&enabled).unwrap();
+    c.client.set_testnet_mode(&enabled);
 }
 
 /// Decode every `test_mode` flag emitted at or after `start_idx`.
@@ -236,7 +238,7 @@ fn set_testnet_mode_without_initialization_returns_not_initialized() {
 #[test]
 fn set_testnet_mode_is_rejected_while_the_contract_is_frozen() {
     let c = setup();
-    c.client.freeze().unwrap();
+    c.client.freeze();
     let before = c.env.events().all().len();
 
     let enable = c.client.try_set_testnet_mode(&true);
@@ -262,7 +264,7 @@ fn a_frozen_rejection_cannot_flip_an_already_enabled_flag() {
     // is that `require_not_frozen` short-circuits before the storage write, and the
     // write and its `test_mode` event live on the same code path — nothing emitted,
     // nothing written.
-    c.client.freeze().unwrap();
+    c.client.freeze();
     let before = c.env.events().all().len();
 
     let res = c.client.try_set_testnet_mode(&false);

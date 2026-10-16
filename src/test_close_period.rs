@@ -39,7 +39,7 @@ fn setup_offering() -> (Env, RevoraRevenueShareClient<'static>, Address, Address
         &payment_token,
         &0i128,
         &symbol_short!(""),
-        &0u32,
+        &7u32,
     );
     (env, client, issuer, token, payment_token)
 }
@@ -79,7 +79,7 @@ fn setup_offering_with_contract_id(
         &payment_token,
         &0,
         &symbol_short!(""),
-        &0,
+        &7,
     );
 
     (env, client, issuer, offering_token, payment_token, contract_id)
@@ -115,7 +115,7 @@ proptest! {
             &payment_token,
             &0i128,
             &symbol_short!(""),
-            &0u32,
+            &7u32,
         );
 
         let holder_a = Address::generate(&env);
@@ -375,6 +375,10 @@ fn make_client(env: &Env) -> RevoraRevenueShareClient {
 fn measure_cpu_for_n_holders(n: u32) -> u64 {
     let env = Env::default();
     env.mock_all_auths();
+    // Registering up to 1000 holders exceeds the host's default budget and would
+    // abort the whole test process; the cost of `close_period` is still measured
+    // as a `cpu_instruction_cost()` delta below.
+    env.budget().reset_unlimited();
     let cid = env.register_contract(None, RevoraRevenueShare);
     let client = RevoraRevenueShareClient::new(&env, &cid);
     let issuer = Address::generate(&env);
@@ -392,7 +396,7 @@ fn measure_cpu_for_n_holders(n: u32) -> u64 {
         &payment_token,
         &0,
         &symbol_short!(""),
-        &0u32,
+        &7u32,
     );
 
     for _ in 0..n {
@@ -477,7 +481,7 @@ fn close_period_zero_holders_has_constant_cost() {
         &payment_token,
         &0,
         &symbol_short!(""),
-        &0u32,
+        &7u32,
     );
 
     let before = env.budget().cpu_instruction_cost();
@@ -513,7 +517,7 @@ fn setup_dual_sig_offering(
         &payment_token,
         &0,
         &symbol_short!(""),
-        &0,
+        &7,
     );
 
     // Enable dual-signature mode.
@@ -579,7 +583,7 @@ fn close_period_dual_sig_not_configured() {
         &payment_token,
         &0,
         &symbol_short!(""),
-        &0,
+        &7,
     );
 
     // Dual-sig close must fail with DualSigNotConfigured.
@@ -737,6 +741,11 @@ fn flush_deferred_queue(env: &Env, contract_id: &Address, count: u32) -> u64 {
 fn close_period_deferred_queue_release_1000_entries_within_budget() {
     let env = Env::default();
     env.mock_all_auths();
+    // The budget comment above assumes the test environment's unlimited budget;
+    // populating 1000 persistent entries otherwise exceeds the host's default
+    // limit and aborts the whole test process. Cost is still measured through
+    // `cpu_instruction_cost()`.
+    env.budget().reset_unlimited();
     let contract_id = env.register_contract(None, RevoraRevenueShare);
 
     // Pre-populate the deferred queue with 1000 entries.

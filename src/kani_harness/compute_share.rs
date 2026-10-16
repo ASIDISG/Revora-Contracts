@@ -140,6 +140,8 @@ pub fn share_and_dust(amount: i128, bps: u32, mode: RoundingMode) -> (i128, i128
 
 #[cfg(test)]
 mod tests {
+    use std::format;
+
     use super::{
         compute_share, naive_product_or_panic, share_and_dust, RoundingMode, BPS_DENOM, MAX_BPS,
     };

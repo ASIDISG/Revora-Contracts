@@ -232,7 +232,7 @@ fn setup_claim_fail() -> (
         &fail_token_id,
         &0,
         &symbol_short!(""),
-        &0,
+        &7,
     );
     revora.set_holder_share(&issuer, &symbol_short!("def"), &offering_token, &holder, &10_000, &1);
 
@@ -457,7 +457,7 @@ fn claim_transfer_fail_does_not_affect_sibling_offering() {
         &token_b_id,
         &0,
         &symbol_short!(""),
-        &0,
+        &7,
     );
     revora.set_holder_share(
         &issuer,

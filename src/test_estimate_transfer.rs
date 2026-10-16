@@ -119,7 +119,7 @@ impl Ctx {
         network: &BytesN<32>,
         attest_hash: &BytesN<32>,
     ) -> Result<(), Result<RevoraError, soroban_sdk::InvokeError>> {
-        self.client.try_estimate_transfer(
+        match self.client.try_estimate_transfer(
             &self.issuer,
             &ns(),
             &self.token,
@@ -129,7 +129,11 @@ impl Ctx {
             category,
             attest_hash,
             network,
-        )
+        ) {
+            Ok(Ok(())) => Ok(()),
+            Ok(Err(_)) => panic!("unexpected conversion error"),
+            Err(inner) => Err(inner),
+        }
     }
 
     /// Assert the estimator allows the transfer.
@@ -387,7 +391,7 @@ fn estimate_reports_cooldown_active_then_allows_after_expiry() {
     let jurisdiction = symbol_short!("us");
 
     ctx.give_share(&from, 100);
-    ctx.set_jurisdiction(&from, jurisdiction);
+    ctx.set_jurisdiction(&from, jurisdiction.clone());
     let _ =
         ctx.client.set_transfer_cooldown(&ctx.issuer, &ns(), &ctx.token, &jurisdiction, &3_600u64);
 

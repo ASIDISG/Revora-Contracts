@@ -70,7 +70,7 @@ fn setup_offering() -> (Env, RevoraRevenueShareClient<'static>, Address, Address
         &payment_token,
         &0,
         &symbol_short!(""),
-        &0,
+        &7,
     );
     mint(&env, &payment_token, &issuer, 10_000_000);
 

@@ -44,7 +44,7 @@ fn setup_env(ts: u64) -> (Env, RevoraRevenueShareClient<'static>, Address, Addre
         &payout_asset,
         &0,
         &symbol_short!(""),
-        &0u32,
+        &7u32,
     );
 
     (env, client, issuer, token, payout_asset)
